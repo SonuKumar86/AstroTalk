@@ -217,7 +217,7 @@ const ZODIAC_SIGNS = [
     cautions: ["escapism", "boundary-blurring"]
   }
 ];
-  //  ELEMENT & MODALITY BEHAVIOUR LIBRARIES
+
 const ELEMENT_PROFILE = {
   Fire: {
     career: "Momentum favors bold moves over careful waiting {tf}.",
