@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Project Name : AstroTalk
 
 A responsive horoscope web application built using "HTML", "CSS", and "JavaScript". Users can explore horoscope predictions for all 12 zodiac signs across multiple time periods through an intuitive and interactive interface.
@@ -74,3 +75,6 @@ project-folder/
 ## 📄 License
 
 This project is available for educational and personal use.
+=======
+# AstroTalk
+>>>>>>> 02a14b91a813cd98fce6cef1c6fa849bcc348638
