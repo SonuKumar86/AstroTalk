@@ -46,7 +46,6 @@ project-folder/
 │── index.html
 │── style.css
 │── script.js
-│── assets/
 └── README.md
 ```
 
