@@ -28,6 +28,7 @@
       <nav class="primary-nav" aria-label="Primary">
         <a href="#wheel">Choose your sign</a>
         <a href="#reading">Reading</a>
+        <a href="#compat">Compatibility</a>
         <a href="#about">How this works</a>
       </nav>
       <div class="header-date" id="header-date" aria-live="polite"></div>
@@ -71,11 +72,53 @@
         <p class="section-eyebrow">Step 1</p>
         <h2 class="section-title">Choose your sign</h2>
         <p class="section-desc">Arranged in tropical order, Aries through Pisces — the same sequence the sky keeps.</p>
+
+        <form class="birthday-finder" id="birthday-finder">
+          <label for="birthday-input" class="birthday-finder-label">Don't know your sign? Enter your birthday</label>
+          <div class="birthday-finder-row">
+            <input type="date" id="birthday-input" class="birthday-finder-input" aria-label="Your birthday">
+            <button type="submit" class="birthday-finder-btn">Find my sign</button>
+          </div>
+          <p class="birthday-finder-result" id="birthday-finder-result" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="filter-chips" id="filter-chips" role="group" aria-label="Filter signs by element or modality">
+        <button class="filter-chip is-active" type="button" data-filter="all">All Signs</button>
+        <button class="filter-chip" type="button" data-filter="element:Fire">🔥 Fire</button>
+        <button class="filter-chip" type="button" data-filter="element:Earth">🌿 Earth</button>
+        <button class="filter-chip" type="button" data-filter="element:Air">💨 Air</button>
+        <button class="filter-chip" type="button" data-filter="element:Water">💧 Water</button>
+        <button class="filter-chip" type="button" data-filter="modality:Cardinal">Cardinal</button>
+        <button class="filter-chip" type="button" data-filter="modality:Fixed">Fixed</button>
+        <button class="filter-chip" type="button" data-filter="modality:Mutable">Mutable</button>
       </div>
 
       <div class="sign-grid" id="sign-grid" role="radiogroup" aria-label="Zodiac sign selection">
        
       </div>
+    </section>
+
+    <section class="compat-section" id="compat">
+      <div class="section-head">
+        <p class="section-eyebrow">Step 2</p>
+        <h2 class="section-title">Check a compatibility match</h2>
+        <p class="section-desc">Compare any two signs against their charted compatibility pairings.</p>
+      </div>
+
+      <div class="compat-picker">
+        <div class="compat-picker-field">
+          <label for="compat-sign-a">First sign</label>
+          <select id="compat-sign-a" class="compat-select"></select>
+        </div>
+        <span class="compat-picker-link" aria-hidden="true">+</span>
+        <div class="compat-picker-field">
+          <label for="compat-sign-b">Second sign</label>
+          <select id="compat-sign-b" class="compat-select"></select>
+        </div>
+      </div>
+
+      <div class="compat-result" id="compat-result"></div>
     </section>
 
     <section class="reading-section" id="reading">
@@ -118,6 +161,12 @@
             <span class="footer-stat-label">Most compatible</span>
             <span class="footer-stat-value" id="compatible-sign">—</span>
           </div>
+          <button class="share-btn" id="share-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <path d="M7 9.5L12 5l5 4.5M12 5v10.5M5 16v2.5a2 2 0 002 2h10a2 2 0 002-2V16" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span id="share-btn-label">Share this reading</span>
+          </button>
         </div>
       </div>
     </section>

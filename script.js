@@ -22,7 +22,16 @@
     headerDate: document.getElementById("header-date"),
     chartSpokes: document.querySelector(".chart-spokes"),
     chartTicks: document.querySelector(".chart-degree-ticks"),
-    rasiRing: document.getElementById("rasi-ring")
+    rasiRing: document.getElementById("rasi-ring"),
+    birthdayForm: document.getElementById("birthday-finder"),
+    birthdayInput: document.getElementById("birthday-input"),
+    birthdayResult: document.getElementById("birthday-finder-result"),
+    filterChips: document.getElementById("filter-chips"),
+    compatSelectA: document.getElementById("compat-sign-a"),
+    compatSelectB: document.getElementById("compat-sign-b"),
+    compatResult: document.getElementById("compat-result"),
+    shareBtn: document.getElementById("share-btn"),
+    shareBtnLabel: document.getElementById("share-btn-label")
   };
 
   const CATEGORY_LABELS = { career: "Career", health: "Health", love: "Love", finance: "Finance" };
@@ -42,6 +51,8 @@
       tile.setAttribute("role", "radio");
       tile.setAttribute("aria-checked", sign.id === state.signId ? "true" : "false");
       tile.dataset.signId = sign.id;
+      tile.dataset.element = sign.element;
+      tile.dataset.modality = sign.modality;
       if (sign.id === state.signId) tile.classList.add("is-selected");
 
       tile.innerHTML = `
@@ -55,15 +66,37 @@
     });
   }
 
-  function selectSign(signId) {
+  function selectSign(signId, options) {
+    const opts = options || {};
     state.signId = signId;
     document.querySelectorAll(".sign-tile").forEach((t) => {
       const isSelected = t.dataset.signId === signId;
       t.classList.toggle("is-selected", isSelected);
       t.setAttribute("aria-checked", isSelected ? "true" : "false");
     });
+    saveLastSign(signId);
     loadReadings();
-    document.getElementById("reading").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!opts.skipScroll) {
+      document.getElementById("reading").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function saveLastSign(signId) {
+    try {
+      window.localStorage.setItem("astrotalk:lastSign", signId);
+    } catch (e) {
+      
+    }
+  }
+
+  function loadLastSign() {
+    try {
+      const saved = window.localStorage.getItem("astrotalk:lastSign");
+      if (saved && ZODIAC_SIGNS.some((s) => s.id === saved)) return saved;
+    } catch (e) {
+      
+    }
+    return null;
   }
 
   function bindTimelineNav() {
@@ -159,12 +192,220 @@
     els.rasiRing.innerHTML = symbols;
   }
 
+
+  function findSignByBirthday(month, day) {
+    return ZODIAC_SIGNS.find((sign) => {
+      const { startMonth, startDay, endMonth, endDay } = sign;
+      if (startMonth === endMonth) {
+        return month === startMonth && day >= startDay && day <= endDay;
+      }
+      // Range wraps across year boundary (e.g. Capricorn: Dec 22 – Jan 19)
+      if (month === startMonth) return day >= startDay;
+      if (month === endMonth) return day <= endDay;
+      return false;
+    });
+  }
+
+  function bindBirthdayFinder() {
+    if (!els.birthdayForm) return;
+    els.birthdayForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const raw = els.birthdayInput.value;
+      if (!raw) {
+        els.birthdayResult.textContent = "Pick a date first.";
+        els.birthdayResult.className = "birthday-finder-result is-error";
+        return;
+      }
+      const [, monthStr, dayStr] = raw.split("-");
+      const month = parseInt(monthStr, 10);
+      const day = parseInt(dayStr, 10);
+      const match = findSignByBirthday(month, day);
+
+      if (!match) {
+        els.birthdayResult.textContent = "Couldn't match that date — double check it and try again.";
+        els.birthdayResult.className = "birthday-finder-result is-error";
+        return;
+      }
+
+      els.birthdayResult.textContent = `You're ${match.symbol} ${match.name} (${match.dateRange}).`;
+      els.birthdayResult.className = "birthday-finder-result is-match";
+      clearFilters();
+      selectSign(match.id);
+    });
+  }
+
+  function clearFilters() {
+    if (!els.filterChips) return;
+    els.filterChips.querySelectorAll(".filter-chip").forEach((c) => {
+      c.classList.toggle("is-active", c.dataset.filter === "all");
+    });
+    document.querySelectorAll(".sign-tile").forEach((t) => t.classList.remove("is-filtered-out"));
+  }
+
+  function applyFilter(filterValue) {
+    document.querySelectorAll(".sign-tile").forEach((tile) => {
+      if (filterValue === "all") {
+        tile.classList.remove("is-filtered-out");
+        return;
+      }
+      const [key, value] = filterValue.split(":");
+      const tileValue = key === "element" ? tile.dataset.element : tile.dataset.modality;
+      tile.classList.toggle("is-filtered-out", tileValue !== value);
+    });
+  }
+
+  function bindFilterChips() {
+    if (!els.filterChips) return;
+    els.filterChips.querySelectorAll(".filter-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        els.filterChips.querySelectorAll(".filter-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+        applyFilter(chip.dataset.filter);
+      });
+    });
+  }
+
+  function populateCompatSelects() {
+    if (!els.compatSelectA || !els.compatSelectB) return;
+    const optionsHtml = ZODIAC_SIGNS.map((s) => `<option value="${s.id}">${s.symbol} ${s.name}</option>`).join("");
+    els.compatSelectA.innerHTML = optionsHtml;
+    els.compatSelectB.innerHTML = optionsHtml;
+    els.compatSelectA.value = "aries";
+    els.compatSelectB.value = "leo";
+  }
+
+  function compatTier(signA, signB) {
+    if (signA.id === signB.id) return { tier: "neutral", label: "Same sign" };
+    const aLikesB = signA.compatibleSigns.includes(signB.name);
+    const bLikesA = signB.compatibleSigns.includes(signA.name);
+    if (aLikesB && bLikesA) return { tier: "strong", label: "Strong match" };
+    if (aLikesB || bLikesA) return { tier: "good", label: "Good match" };
+    if (signA.element === signB.element) return { tier: "good", label: "Good match" };
+    const sameModality = signA.modality === signB.modality;
+    const compatibleElements =
+      (signA.element === "Fire" && signB.element === "Air") ||
+      (signA.element === "Air" && signB.element === "Fire") ||
+      (signA.element === "Earth" && signB.element === "Water") ||
+      (signA.element === "Water" && signB.element === "Earth");
+    if (compatibleElements) return { tier: "good", label: "Good match" };
+    if (sameModality) return { tier: "challenging", label: "Takes effort" };
+    return { tier: "neutral", label: "Mixed signals" };
+  }
+
+  function compatDescription(signA, signB, tier) {
+    const possessive = (name) => (name.endsWith("s") ? `${name}'` : `${name}'s`);
+    const sameElement = signA.element === signB.element;
+    const elementLine = sameElement
+      ? `Both share the ${signA.element.toLowerCase()} element, so you tend to read each other's instincts easily.`
+      : `${signA.name} brings ${signA.element.toLowerCase()} energy against ${signB.name}'s ${signB.element.toLowerCase()} — ${tier.tier === "challenging" ? "a combination that takes deliberate effort to balance" : "a difference that can complement more than it clashes"}.`;
+    const modalityLine = signA.modality === signB.modality
+      ? `Both are ${signA.modality.toLowerCase()} signs, so you'll likely move at a similar pace — for better or worse.`
+      : `${possessive(signA.name)} ${signA.modality.toLowerCase()} nature meets ${possessive(signB.name)} ${signB.modality.toLowerCase()} nature, giving the pairing two different speeds to reconcile.`;
+    return `${elementLine} ${modalityLine}`;
+  }
+
+  function renderCompatResult() {
+    if (!els.compatResult) return;
+    const signA = ZODIAC_SIGNS.find((s) => s.id === els.compatSelectA.value);
+    const signB = ZODIAC_SIGNS.find((s) => s.id === els.compatSelectB.value);
+    if (!signA || !signB) return;
+
+    const tier = compatTier(signA, signB);
+    const description = compatDescription(signA, signB, tier);
+
+    els.compatResult.classList.add("is-visible");
+    els.compatResult.innerHTML = `
+      <div class="compat-result-head">
+        <span class="compat-result-pair">${signA.symbol} ${signA.name}<span class="compat-plus">+</span>${signB.symbol} ${signB.name}</span>
+        <span class="compat-result-verdict" data-tier="${tier.tier}">${tier.label}</span>
+      </div>
+      <p class="compat-result-text">${description}</p>
+      <div class="compat-result-grid">
+        <div class="compat-result-stat">
+          <span class="compat-result-stat-label">${signA.name}'s element &amp; modality</span>
+          <span class="compat-result-stat-value">${signA.element} · ${signA.modality}</span>
+        </div>
+        <div class="compat-result-stat">
+          <span class="compat-result-stat-label">${signB.name}'s element &amp; modality</span>
+          <span class="compat-result-stat-value">${signB.element} · ${signB.modality}</span>
+        </div>
+        <div class="compat-result-stat">
+          <span class="compat-result-stat-label">Charted pairing</span>
+          <span class="compat-result-stat-value">${signA.compatibleSigns.includes(signB.name) || signB.compatibleSigns.includes(signA.name) ? "Listed match" : "Not listed"}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindCompatChecker() {
+    if (!els.compatSelectA || !els.compatSelectB) return;
+    populateCompatSelects();
+    els.compatSelectA.addEventListener("change", renderCompatResult);
+    els.compatSelectB.addEventListener("change", renderCompatResult);
+    renderCompatResult();
+  }
+
+  function buildShareText() {
+    const sign = ZODIAC_SIGNS.find((s) => s.id === state.signId);
+    const reading = state.readings[state.timeframe];
+    if (!sign || !reading) return "";
+    const lines = [
+      `${sign.symbol} ${sign.name} — ${reading.timeframeLabel}'s reading`,
+      reading.summary,
+      `Career ${reading.scores.career}/100 · Health ${reading.scores.health}/100 · Love ${reading.scores.love}/100 · Finance ${reading.scores.finance}/100`,
+      `Lucky number ${reading.luckyNumber} · Lucky color ${reading.luckyColor} · Most compatible with ${reading.compatibleSign}`
+    ];
+    return lines.join("\n");
+  }
+
+  function bindShareButton() {
+    if (!els.shareBtn) return;
+    els.shareBtn.addEventListener("click", async () => {
+      const text = buildShareText();
+      try {
+        await navigator.clipboard.writeText(text);
+        flashShareSuccess();
+      } catch (e) {
+        
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+          flashShareSuccess();
+        } catch (e2) {
+          els.shareBtnLabel.textContent = "Copy failed — select manually";
+        }
+        document.body.removeChild(ta);
+      }
+    });
+  }
+
+  function flashShareSuccess() {
+    els.shareBtn.classList.add("is-copied");
+    const original = els.shareBtnLabel.textContent;
+    els.shareBtnLabel.textContent = "Copied!";
+    setTimeout(() => {
+      els.shareBtn.classList.remove("is-copied");
+      els.shareBtnLabel.textContent = original;
+    }, 2000);
+  }
+
   function init() {
+    const lastSign = loadLastSign();
+    if (lastSign) state.signId = lastSign;
+
     renderHeaderDate();
     renderSignGrid();
     bindTimelineNav();
     renderChartDecor();
     renderRasiRing();
+    bindBirthdayFinder();
+    bindFilterChips();
+    bindCompatChecker();
+    bindShareButton();
     loadReadings();
   }
 
